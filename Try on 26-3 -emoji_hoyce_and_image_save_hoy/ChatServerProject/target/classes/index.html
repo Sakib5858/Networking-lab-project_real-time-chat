@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@5.4.0/dist/emoji-mart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/emoji-mart@5.4.0/dist/emoji-mart.css" rel="stylesheet" />
     <title>Modern Chat Room</title>
     <style>
         * {
@@ -139,16 +141,41 @@
         border: 1px solid #ddd;
     }
 
+        .text-input {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-right: 10px;
+    min-height: 36px; /* Ensures a minimum height like an input field */
+    outline: none; /* Removes default focus outline */
+    overflow-wrap: break-word; /* Ensures text wraps properly */
+    word-break: break-word; /* Prevents long unbroken strings from overflowing */
+    white-space: pre-wrap; /* Maintains spaces and line breaks */
+    background-color: #fff; /* Matches input field background */
+}
+.text-input:empty::before {
+    content: attr(placeholder);
+    color: #888;
+    pointer-events: none; /* Placeholder is non-interactive */
+}
+
 
 
     </style>
 </head>
 <body>
+
+
+<div id="emoji-suggestions" style="position: absolute; display: none; border: 1px solid #ccc; background: white;"></div>
+
+
 <div class="chat-container">
     <div class="chat-header">
         Modern Chat Room
     </div>
-    <div class="chat-messages" id="messages">
+    <div class="chat-messages" id="messages" >
         <!-- Chat messages will appear here -->
     </div>
     <div class="chat-footer">
@@ -156,9 +183,10 @@
             <label for="fileInput">📎</label>
             <input id="fileInput" type="file" accept="image/png,video/mp4">
         </div>
-        <input id="input" type="text" placeholder="Type your message">
+        <div id="input" class="text-input" contenteditable="true" placeholder="Type your message..."></div>
         <button id="send">Send</button>
     </div>
+
 </div>
 
 <script>
@@ -304,6 +332,70 @@ fileInput.onchange = () => {
             sendButton.click();
         }
     });
+
+
+   const emojiMap = {
+    ":smile:": "😄",
+    ":heart:": "❤️",
+    ":thumbsup:": "👍",
+    ":laugh:": "😂",
+    ":cry:": "😢",
+};
+
+const chatInput = document.getElementById("input");
+const suggestionsBox = document.getElementById("emoji-suggestions");
+
+chatInput.addEventListener("input", () => {
+    const text = chatInput.innerText; // Use innerText to get plain text
+    const lastWord = text.split(" ").pop();
+
+    // Check for matching emojis
+    const matches = Object.keys(emojiMap).filter((key) =>
+        key.startsWith(lastWord)
+    );
+
+    if (matches.length > 0) {
+        // Show suggestions
+        suggestionsBox.innerHTML = matches
+            .map((key) => `<div data-emoji="${key}">${key} ${emojiMap[key]}</div>`)
+            .join("");
+        suggestionsBox.style.display = "block";
+
+        // Position the suggestion box
+        const rect = chatInput.getBoundingClientRect();
+        suggestionsBox.style.top = `${rect.bottom + window.scrollY}px`;
+        suggestionsBox.style.left = `${rect.left + window.scrollX}px`;
+
+        // Handle suggestion click
+        suggestionsBox.querySelectorAll("div").forEach((div) => {
+            div.addEventListener("click", () => {
+                const selectedEmoji = emojiMap[div.getAttribute("data-emoji")];
+
+                // Replace last word with selected emoji
+                chatInput.innerHTML = chatInput.innerHTML.replace(
+                    new RegExp(`${lastWord}$`),
+                    selectedEmoji
+                );
+
+                // Hide suggestions
+                suggestionsBox.style.display = "none";
+                chatInput.focus(); // Focus back to the input
+            });
+        });
+    } else {
+        suggestionsBox.style.display = "none";
+    }
+});
+
+// Adjust Send Button Logic
+sendButton.onclick = () => {
+    const message = chatInput.innerHTML.trim(); // Use innerHTML to capture emojis
+    if (message) {
+        ws.send(message);
+        chatInput.innerHTML = ''; // Clear the input field
+    }
+};
+
 </script>
 </body>
 </html>
